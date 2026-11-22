@@ -1,14 +1,24 @@
 # maplestory-rune-alert
 
 사용법
+
 1. 화면공유를 메이플 창을 지정
+
 2. 공유된 화면을 드래그하면 선택 영역을 재지정 할 수 있음(권장 게임 해상도 1920×1080, 1366×768)
-3. 필요에 따라 오차범위와 감지 픽셀 수를 조정
-4. 선택 영역 미리보기에서 미니맵 상 룬
-5. 알림 상태창은 클릭 시 새 창으로 띄울 수 있음
-<img width="142" height="97" alt="image" src="https://github.com/user-attachments/assets/91ee6ddf-ef8c-4870-a7d0-a152e70ed88c" />
+   <img width="142" height="97" alt="image" src="https://github.com/user-attachments/assets/91ee6ddf-ef8c-4870-a7d0-a152e70ed88c" />
+   * 선택 영역은 위 사진 정도를 권장
+   
+3. 선택 영역 미리보기에서 룬 아이콘 정가운데를 클릭하면 그 색상을 감지 함
+   <img width="154" height="83" alt="image" src="https://github.com/user-attachments/assets/f24bf514-039a-4e4b-a130-1bcfa5b024ab" />
+   * 보라색 룬 아이콘 정중앙을 클릭
+   * 컨트롤 휠을 이용하여 확대하면 정확하게 선택할 수 있음
+   
+5. 감지가 안될 시 필요에 따라 오차범위와 감지 픽셀 수를 조정
+   * 오차범위를 먼저 늘리는 것을 추천
+
+6. 알림 상태창은 클릭 시 새 창으로 띄울 수 있음
 
 
 
-최신 릴리즈
+# 최신 릴리즈
 https://github.com/yuzuna0x0/maplestory-rune-alert/releases/tag/1.1
