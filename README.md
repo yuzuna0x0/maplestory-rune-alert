@@ -25,4 +25,4 @@
 
 
 # 최신 릴리즈
-https://github.com/yuzuna0x0/maplestory-rune-alert/releases/tag/1.1
+https://github.com/yuzuna0x0/maplestory-rune-alert/releases/tag/Releases
