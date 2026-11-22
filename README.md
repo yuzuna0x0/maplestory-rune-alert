@@ -4,7 +4,10 @@
 
 1. 화면공유를 메이플 창을 지정
 
-2. 공유된 화면을 드래그하면 선택 영역을 재지정 할 수 있음(권장 게임 해상도 1920×1080, 1366×768)
+   <img width="189" height="223" alt="image" src="https://github.com/user-attachments/assets/c3c83c12-1f3b-4eee-b925-48d81f181c9b" />
+
+
+3. 공유된 화면을 드래그하면 선택 영역을 재지정 할 수 있음(권장 게임 해상도 1920×1080, 1366×768)
    
    <img width="142" height="97" alt="image" src="https://github.com/user-attachments/assets/91ee6ddf-ef8c-4870-a7d0-a152e70ed88c" />
    
