@@ -4,9 +4,6 @@
 
 1. 화면공유를 메이플 창을 지정
 
-   <img width="93" height="26" alt="image" src="https://github.com/user-attachments/assets/d33dc583-df99-46f9-a075-142a909aee7f" />
-
-
    <img width="189" height="223" alt="image" src="https://github.com/user-attachments/assets/c3c83c12-1f3b-4eee-b925-48d81f181c9b" />
 
 
