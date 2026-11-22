@@ -7,11 +7,13 @@
 2. 공유된 화면을 드래그하면 선택 영역을 재지정 할 수 있음(권장 게임 해상도 1920×1080, 1366×768)
    
    <img width="142" height="97" alt="image" src="https://github.com/user-attachments/assets/91ee6ddf-ef8c-4870-a7d0-a152e70ed88c" />
+   
    * 선택 영역은 위 사진 정도를 권장
    
 4. 선택 영역 미리보기에서 룬 아이콘 정가운데를 클릭하면 그 색상을 감지 함
    
    <img width="154" height="83" alt="image" src="https://github.com/user-attachments/assets/f24bf514-039a-4e4b-a130-1bcfa5b024ab" />
+
    * 보라색 룬 아이콘 정중앙을 클릭
    * 컨트롤 휠을 이용하여 확대하면 정확하게 선택할 수 있음
    
