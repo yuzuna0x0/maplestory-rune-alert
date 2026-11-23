@@ -2,18 +2,23 @@
 
 사용법
 
-1. 화면공유를 메이플 창을 지정
+1. 화면 공유 시작 버튼을 클릭
+
+   <img width="93" height="26" alt="스크린샷 2026-11-22 134024" src="https://github.com/user-attachments/assets/f209c9be-4905-44e0-8915-42e1f52c8911" />
+
+
+3. 메이플 창을 지정
 
    <img width="189" height="223" alt="image" src="https://github.com/user-attachments/assets/c3c83c12-1f3b-4eee-b925-48d81f181c9b" />
 
 
-3. 공유된 화면을 드래그하면 선택 영역을 재지정 할 수 있음(권장 게임 해상도 1920×1080, 1366×768)
+4. 공유된 화면을 드래그하면 선택 영역을 재지정 할 수 있음(권장 게임 해상도 1920×1080, 1366×768)
    
    <img width="142" height="97" alt="image" src="https://github.com/user-attachments/assets/91ee6ddf-ef8c-4870-a7d0-a152e70ed88c" />
    
    * 선택 영역은 위 사진 정도를 권장
    
-4. 선택 영역 미리보기에서 룬 아이콘 정가운데를 클릭하면 그 색상을 감지 함
+5. 선택 영역 미리보기에서 룬 아이콘 정가운데를 클릭하면 그 색상을 감지 함
    
    <img width="154" height="83" alt="image" src="https://github.com/user-attachments/assets/f24bf514-039a-4e4b-a130-1bcfa5b024ab" />
 
