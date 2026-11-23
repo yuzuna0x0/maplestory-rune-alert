@@ -1,6 +1,11 @@
 # maplestory-rune-alert
 
-사용법
+##사용하기
+
+https://yuzuna0x0.github.io/maplestory-rune-alert/
+
+
+##사용법
 
 1. 화면 공유 시작 버튼을 클릭
 
@@ -33,5 +38,4 @@
 
 
 
-# 최신 릴리즈
-https://yuzuna0x0.github.io/maplestory-rune-alert/
+
