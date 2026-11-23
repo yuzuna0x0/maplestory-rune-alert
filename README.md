@@ -1,6 +1,8 @@
 # maplestory-rune-alert
 
-## 사용하기
+메이플스토리 미니맵을 감지하며 룬 생성 시 알림을 보조하는 도구
+
+## 최신 릴리즈
 
 https://yuzuna0x0.github.io/maplestory-rune-alert/
 
