@@ -41,6 +41,7 @@
     button.danger { color: #ff8b84; border-color: #5a2a2a; background: #2a1a1f; }
     button.danger:hover { background: #3a2026; }
     button.active { border-color: var(--accent); background: #3a2447; }
+    button:disabled { opacity: .55; cursor: default; }
     button.wide { width: 100%; }
     :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
@@ -88,6 +89,8 @@
     .preview-box { width: 100%; height: 120px; background: #0b0a10; border: 1px solid var(--line);
       border-radius: 5px; overflow: hidden; }
     .preview { display: block; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; cursor: crosshair; }
+    .preview-controls { flex-wrap: wrap; justify-content: space-between; }
+    .preview-controls label { display: inline-flex; align-items: center; gap: 4px; }
     .meta.warn { color: #ffb454; }
     .lbl small { color: #6f6b86; font-size: 11px; }
     .stack { margin: 0 0 12px; }
@@ -105,12 +108,12 @@
     <header class="top">
       <div class="left">
         <h1>찍계는 안된다이~~~</h1>
-        <span class="share" id="shareState"><i></i><b>공유 중지됨</b></span>
+        <span class="share" id="shareState" role="status"><i></i><b>공유 중지됨</b></span>
       </div>
       <div class="right">
         <a class="btn" href="https://github.com/yuzuna0x0/maplestory-rune-alert" target="_blank" rel="noopener noreferrer" title="GitHub에서 사용법 보기">사용법</a>
         <button id="popupBtn" type="button">별도 상태 창 열기</button>
-        <button id="stopBtn" class="danger">중지</button>
+        <button id="stopBtn" class="danger" disabled>중지</button>
         <button id="startBtn" class="primary">화면 공유 시작</button>
       </div>
     </header>
@@ -162,13 +165,18 @@
           </div>
           <div class="row">
             <label for="intervalInput">스캔 간격</label>
-            <div class="ctl"><input id="intervalInput" type="number" min="20" max="10000" step="50" value="1000" /><span class="unit">ms</span></div>
+            <div class="ctl"><input id="intervalInput" type="number" min="20" max="10000" value="1000" /><span class="unit">ms</span></div>
           </div>
           <div class="stack">
             <span class="lbl">선택 영역 미리보기 <small>(클릭하면 그 픽셀 색으로 지정)</small></span>
             <div class="preview-box">
               <canvas id="previewCanvas" class="preview" width="114" height="48"></canvas>
             </div>
+            <div class="ctl preview-controls">
+              <label><input id="highlightPixels" type="checkbox" checked /> 감지 픽셀 표시</label>
+              <button id="samplePreviewBtn" type="button" aria-pressed="false">샘플 보기</button>
+            </div>
+            <p class="meta" id="samplePreviewInfo" hidden></p>
           </div>
         </section>
 
@@ -260,8 +268,16 @@
     const scanCtx = scanCanvas.getContext("2d", { willReadFrequently: true });
     const previewCanvas = document.getElementById("previewCanvas");
     const previewCtx = previewCanvas.getContext("2d");
+    const highlightPixels = document.getElementById("highlightPixels");
+    const samplePreviewBtn = document.getElementById("samplePreviewBtn");
+    const samplePreviewInfo = document.getElementById("samplePreviewInfo");
+    let previewFrame = null;
+    let showingSample = false;
 
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
     let stream = null;
+    let pendingShare = null;
     let timerId = null;
     let blinkTimerId = null;
     let blinkWhite = false;
@@ -470,7 +486,7 @@
     statusBox.addEventListener("click", openOrFocusPopup);
 
     function applyVolume() {
-      const vol = Math.max(0, Math.min(1, Number(volumeRange.value) / 100));
+      const vol = readNumber(volumeRange) / 100;
       alertAudio.volume = vol;
       volumeText.textContent = `${Math.round(vol * 100)}%`;
     }
@@ -493,7 +509,7 @@
 
     function playSequence(count) {
       if (!alertAudio.src) return;
-      remainingRepeats = Math.max(1, Number(count) || 1);
+      remainingRepeats = count;
       alertAudio.pause();
       alertAudio.currentTime = 0;
       alertAudio.play().catch((err) => console.warn("오디오 재생 실패:", err));
@@ -512,7 +528,7 @@
         alert("알림 소리 파일을 불러오지 못했어요. 알림 소리에서 소리 파일을 선택해 주세요.");
         return;
       }
-      playSequence(repeatInput.value);
+      playSequence(readNumber(repeatInput));
     });
 
     function setTargetRgb(r, g, b) {
@@ -521,11 +537,11 @@
       rgbText.textContent = `${r}, ${g}, ${b}`;
       const hex = "#" + [r, g, b].map(v => v.toString(16).padStart(2, "0")).join("");
       colorPicker.value = hex;
+      renderPreview();
     }
 
     function getCurrentIntervalMs() {
-      const val = Number(intervalInput.value);
-      return Number.isFinite(val) && val >= 20 ? val : 1000;
+      return readNumber(intervalInput);
     }
 
     function getTickWorker() {
@@ -573,8 +589,11 @@
 
     function restartTimer() {
       stopTimer();
-      if (!stream) return;
       const ms = getCurrentIntervalMs();
+      if (!stream) {
+        liveCountInfo.textContent = `감지된 픽셀: 0 px | 스캔주기: ${ms} ms`;
+        return;
+      }
       const w = getTickWorker();
       if (w) {
         w.postMessage({ cmd: "start", ms });
@@ -625,8 +644,7 @@
     }
 
     function getCycleMs() {
-      const m = Number(document.getElementById("cycleMinInput").value);
-      return (Number.isFinite(m) && m > 0 ? m : 15) * 60000;
+      return readNumber(document.getElementById("cycleMinInput")) * 60000;
     }
 
     function fmtMs(ms) {
@@ -653,21 +671,32 @@
       }
     }
 
-    function setShareState(on, note = "") {
+    function setShareState(message) {
       const el = document.getElementById("shareState");
-      el.classList.toggle("on", on);
-      el.querySelector("b").textContent = on ? "화면 공유 중" + note : "공유 중지됨";
+      el.classList.toggle("on", !!stream);
+      el.querySelector("b").textContent = message;
+      startBtn.disabled = !!stream || !!pendingShare;
+      stopBtn.disabled = !stream && (!pendingShare || pendingShare.cancelled);
     }
 
     function stopSharing() {
+      if (pendingShare && !stream) {
+        pendingShare.cancelled = true;
+        setShareState("공유 취소 중 · 브라우저 선택창을 닫아 주세요");
+        return;
+      }
       stopTimer();
       if (stream) {
         stream.getTracks().forEach(t => t.stop());
         stream = null;
       }
       stopFrameReader();
+      video.onloadedmetadata = null;
       video.srcObject = null;
-      setShareState(false);
+      dragging = false;
+      selBox.style.display = "none";
+      clearPreview();
+      setShareState("공유 중지됨");
       remainingRepeats = 0;
       alertAudio.pause();
       prevFound = false;
@@ -697,32 +726,58 @@
     intervalInput.addEventListener("input", restartTimer);
     fontRange.addEventListener("input", syncStatusDisplay);
 
-    document.getElementById("startBtn").addEventListener("click", async () => {
+    startBtn.addEventListener("click", async () => {
+      if (pendingShare || stream) return;
+      if (!navigator.mediaDevices?.getDisplayMedia) {
+        setShareState("화면 공유를 지원하는 브라우저의 HTTPS 페이지에서 열어 주세요");
+        return;
+      }
+
+      const request = { cancelled: false };
+      pendingShare = request;
+      setShareState("공유할 화면을 선택해 주세요");
+      let message = "공유 중지됨";
       try {
-        if (stream) stopSharing(); // 중복 시작 시 이전 스트림 정리
-        stream = await navigator.mediaDevices.getDisplayMedia({
+        const captured = await navigator.mediaDevices.getDisplayMedia({
           video: { frameRate: { ideal: 30, max: 60 } },
           audio: false
         });
-        // 브라우저 상단의 "공유 중지" 버튼으로 끊었을 때도 정리
-        stream.getVideoTracks()[0].addEventListener("ended", stopSharing);
-        const bgOk = startFrameReader(stream.getVideoTracks()[0]);
-        video.srcObject = stream;
+        const track = captured.getVideoTracks()[0];
+        if (request.cancelled || track?.readyState !== "live") {
+          captured.getTracks().forEach(t => t.stop());
+          return;
+        }
+        stream = captured;
+        clearPreview();
+        track.addEventListener("ended", () => {
+          if (stream === captured) stopSharing();
+        }, { once: true });
+        const bgOk = startFrameReader(track);
         video.onloadedmetadata = () => {
-          // 저장/선택된 영역이 있으면 그걸 쓰고, 없으면 기본 영역 적용
-          requestAnimationFrame(() => (normRegion ? showRegion() : applyDefaultPxRegion()));
+          requestAnimationFrame(() => {
+            if (stream !== captured) return;
+            if (normRegion) showRegion();
+            else applyDefaultPxRegion();
+          });
         };
-        prevFound = false;
-        missCount = 0;
-        lastAlertAt = 0;
+        video.srcObject = captured;
         restartTimer();
-        setShareState(true, bgOk ? "" : " (백그라운드 스캔 불가)");
+        message = bgOk ? "화면 공유 중" : "화면 공유 중 (백그라운드 스캔 불가)";
       } catch (err) {
-        console.error(err);
+        if (stream) stopSharing();
+        if (!request.cancelled) {
+          message = err.name === "NotAllowedError"
+            ? "화면 공유가 취소되었거나 권한이 거부됐어요"
+            : "화면 공유를 시작하지 못했어요";
+          console.warn("화면 공유 시작 실패:", err);
+        }
+      } finally {
+        pendingShare = null;
+        setShareState(message);
       }
     });
 
-    document.getElementById("stopBtn").addEventListener("click", stopSharing);
+    stopBtn.addEventListener("click", stopSharing);
 
     video.addEventListener("click", (e) => {
       if (!eyedropMode || !video.videoWidth) return;
@@ -753,11 +808,85 @@
       const offY = (rect.height - ch * scale) / 2;
       const x = Math.floor((e.clientX - rect.left - offX) / scale);
       const y = Math.floor((e.clientY - rect.top - offY) / scale);
-      if (x < 0 || y < 0 || x >= cw || y >= ch) return;
-      const px = previewCtx.getImageData(x, y, 1, 1).data;
-      if (px[3] === 0) return; // 아직 화면이 그려지지 않음
-      setTargetRgb(px[0], px[1], px[2]);
+      if (!previewFrame || x < 0 || y < 0 || x >= cw || y >= ch) return;
+      const offset = (y * cw + x) * 4;
+      const [r, g, b, a] = previewFrame.data.subarray(offset, offset + 4);
+      if (a === 0) return;
+      setTargetRgb(r, g, b);
       saveSettings();
+    });
+
+    function clearPreview() {
+      previewFrame = null;
+      showingSample = false;
+      samplePreviewBtn.disabled = !!stream;
+      samplePreviewBtn.textContent = "샘플 보기";
+      samplePreviewBtn.setAttribute("aria-pressed", "false");
+      samplePreviewInfo.hidden = true;
+      previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+    }
+
+    function renderPreview() {
+      if (!previewFrame) return 0;
+      const { data, width, height } = previewFrame;
+      const tol = readNumber(document.getElementById("tolInput"));
+      const highlighted = highlightPixels.checked
+        ? new ImageData(new Uint8ClampedArray(data), width, height)
+        : null;
+      let matched = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        if (
+          Math.abs(data[i] - targetRgb[0]) <= tol &&
+          Math.abs(data[i + 1] - targetRgb[1]) <= tol &&
+          Math.abs(data[i + 2] - targetRgb[2]) <= tol
+        ) {
+          matched++;
+          if (highlighted) {
+            highlighted.data[i] = 0;
+            highlighted.data[i + 1] = 255;
+            highlighted.data[i + 2] = 224;
+          }
+        }
+      }
+
+      if (previewCanvas.width !== width) previewCanvas.width = width;
+      if (previewCanvas.height !== height) previewCanvas.height = height;
+      previewCtx.putImageData(highlighted || previewFrame, 0, 0);
+      if (showingSample) {
+        samplePreviewInfo.textContent = `샘플 · 일치 ${matched} px`;
+      }
+      return matched;
+    }
+
+    highlightPixels.addEventListener("change", renderPreview);
+    document.getElementById("tolInput").addEventListener("input", renderPreview);
+    samplePreviewBtn.addEventListener("click", () => {
+      if (stream) return;
+      if (showingSample) {
+        clearPreview();
+        return;
+      }
+      scanCanvas.width = 114;
+      scanCanvas.height = 48;
+      scanCtx.fillStyle = "#222939";
+      scanCtx.fillRect(0, 0, 114, 48);
+      scanCtx.fillStyle = "#65758b";
+      scanCtx.fillRect(5, 37, 104, 2);
+      scanCtx.fillRect(13, 26, 32, 2);
+      scanCtx.fillRect(54, 20, 42, 2);
+      scanCtx.fillRect(39, 28, 2, 9);
+      scanCtx.fillStyle = "#f7cf68";
+      scanCtx.fillRect(24, 22, 4, 4);
+      scanCtx.fillStyle = "#b558c9";
+      scanCtx.fillRect(72, 11, 7, 7);
+      scanCtx.fillStyle = "#d46df0";
+      scanCtx.fillRect(73, 12, 5, 5);
+      previewFrame = scanCtx.getImageData(0, 0, 114, 48);
+      showingSample = true;
+      samplePreviewBtn.textContent = "샘플 닫기";
+      samplePreviewBtn.setAttribute("aria-pressed", "true");
+      samplePreviewInfo.hidden = false;
+      renderPreview();
     });
 
     stageWrap.addEventListener("mousedown", (e) => {
@@ -814,6 +943,7 @@
     });
 
     function scanFrame() {
+      if (!stream) return;
       const ms = getCurrentIntervalMs();
       updateSubText(); // 백그라운드에서도 방치 시간/카운트다운 갱신
 
@@ -836,25 +966,9 @@
       if (scanCanvas.height !== sh) scanCanvas.height = sh;
       scanCtx.drawImage(src, sx, sy, sw, sh, 0, 0, sw, sh);
 
-      // 선택 영역 미리보기
-      if (previewCanvas.width !== sw) previewCanvas.width = sw;
-      if (previewCanvas.height !== sh) previewCanvas.height = sh;
-      previewCtx.drawImage(scanCanvas, 0, 0);
-
-      const data = scanCtx.getImageData(0, 0, sw, sh).data;
-      const tol = Math.max(0, Number(document.getElementById("tolInput").value) || 0);
-      const minPx = Math.max(1, Number(document.getElementById("minPxInput").value) || 1);
-
-      let matched = 0;
-      for (let i = 0; i < data.length; i += 4) {
-        if (
-          Math.abs(data[i] - targetRgb[0]) <= tol &&
-          Math.abs(data[i + 1] - targetRgb[1]) <= tol &&
-          Math.abs(data[i + 2] - targetRgb[2]) <= tol
-        ) {
-          matched++;
-        }
-      }
+      previewFrame = scanCtx.getImageData(0, 0, sw, sh);
+      const matched = renderPreview();
+      const minPx = readNumber(document.getElementById("minPxInput"));
 
       liveCountInfo.textContent = `감지된 픽셀: ${matched} px | 스캔주기: ${ms} ms`;
 
@@ -877,13 +991,13 @@
           foundSinceTs = Date.now();
           nextRuneAt = null;
           startBlinkLoop();
-          playSequence(repeatInput.value);
+          playSequence(readNumber(repeatInput));
         } else {
           // 계속 감지 중: 간격이 지날 때마다 무제한 재알림 (0이면 끔)
-          const remindSec = Number(remindSecInput.value) || 0;
-          if (remindSec > 0 && now - lastAlertAt >= Math.max(5, remindSec) * 1000) {
+          const remindSec = readNumber(remindSecInput);
+          if (remindSec > 0 && now - lastAlertAt >= remindSec * 1000) {
             lastAlertAt = now;
-            playSequence(repeatInput.value);
+            playSequence(readNumber(repeatInput));
           }
           syncStatusDisplay();
         }
@@ -900,17 +1014,7 @@
     }
 
     // ===== 기본값 / 설정 저장 / 초기화 =====
-    const DEFAULTS = {
-      color: [212, 109, 240],
-      tol: 5,
-      minPx: 5,
-      interval: 1000,
-      font: 56,
-      repeat: 2,
-      volume: 70,
-      remindSec: 30,
-      cycleMin: 15
-    };
+    const DEFAULTS = { color: [212, 109, 240] };
     const SETTINGS_KEY = "runeScannerSettings.v1";
     const NUMBER_FIELDS = {
       tol: "tolInput",
@@ -923,6 +1027,13 @@
       cycleMin: "cycleMinInput"
     };
 
+    function readNumber(input, raw = input.value) {
+      const hasNumber = typeof raw === "number" || (typeof raw === "string" && raw.trim() !== "");
+      const parsed = hasNumber ? Number(raw) : NaN;
+      const value = Number.isFinite(parsed) ? parsed : Number(input.defaultValue);
+      return Math.max(Number(input.min), Math.min(Number(input.max), Math.round(value)));
+    }
+
     function isValidRegion(r) {
       return !!r && ["x", "y", "w", "h"].every(k => Number.isFinite(r[k])) &&
         r.w > 0 && r.h > 0 && r.x >= 0 && r.y >= 0 && r.x + r.w <= 1.0001 && r.y + r.h <= 1.0001;
@@ -931,7 +1042,7 @@
     function saveSettings() {
       const data = { color: targetRgb.slice(), region: normRegion };
       for (const [key, id] of Object.entries(NUMBER_FIELDS)) {
-        data[key] = Number(document.getElementById(id).value);
+        data[key] = readNumber(document.getElementById(id));
       }
       try {
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
@@ -942,10 +1053,8 @@
 
     function applySettings(src) {
       for (const [key, id] of Object.entries(NUMBER_FIELDS)) {
-        const v = Number(src[key]);
-        if (src[key] !== null && src[key] !== undefined && Number.isFinite(v)) {
-          document.getElementById(id).value = v;
-        }
+        const input = document.getElementById(id);
+        input.value = readNumber(input, src[key] ?? null);
       }
       const c = src.color;
       if (Array.isArray(c) && c.length === 3 && c.every(n => Number.isFinite(Number(n)))) {
@@ -976,6 +1085,8 @@
       applySettings(DEFAULTS);
 
       // 선택 영역 → 기본 영역
+      highlightPixels.checked = true;
+      renderPreview();
       normRegion = null;
       selBox.style.display = "none";
       regionInfo.textContent = REGION_INFO_DEFAULT_TEXT;
@@ -1009,8 +1120,14 @@
     setInterval(updateSubText, 500);
 
     loadSettings();
+    restartTimer();
     Object.values(NUMBER_FIELDS).forEach(id => {
-      document.getElementById(id).addEventListener("input", saveSettings);
+      const input = document.getElementById(id);
+      input.addEventListener("input", saveSettings);
+      input.addEventListener("change", () => {
+        input.value = readNumber(input);
+        saveSettings();
+      });
     });
   </script>
 </body>
